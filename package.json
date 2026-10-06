@@ -1,5 +1,5 @@
 {
-  "name": "throbbing-poetry-f9d0",
+  "name": "jtaxidienrg",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -9,5 +9,8 @@
   },
   "devDependencies": {
     "wrangler": "^4.147.0"
+  },
+  "dependencies": {
+    "@cloudflare/config": "^0.23.0"
   }
 }
