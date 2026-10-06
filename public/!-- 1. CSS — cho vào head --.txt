@@ -1,0 +1,108 @@
+<!-- 1. CSS — cho vào <head> -->
+<style>
+  .music-player {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #1a1a2e;
+    border-radius: 20px;
+    padding: 30px;
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  .music-player h2 { text-align: center; margin-bottom: 20px; }
+  .music-player .now-playing { text-align: center; color: #e94560; margin: 15px 0; min-height: 1.5em; }
+  .music-player .playlist { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+  .music-player .playlist li {
+    padding: 14px 18px; margin: 8px 0; background: #16213e;
+    border-radius: 10px; cursor: pointer; transition: all 0.2s;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .music-player .playlist li:hover { background: #0f3460; }
+  .music-player .playlist li.active { background: #e94560; }
+  .music-player .song-size { font-size: 0.8em; opacity: 0.6; }
+  .music-player audio { width: 100%; margin-top: 15px; }
+  .music-player .start-btn {
+    display: block; margin: 20px auto 0; padding: 14px 40px;
+    background: #e94560; color: #fff; border: none; border-radius: 50px;
+    font-size: 1.1em; cursor: pointer;
+  }
+  .music-player .start-btn:hover { background: #c73e54; }
+  .music-player .start-btn.hidden { display: none; }
+</style>
+
+<!-- 2. HTML — đặt nơi muốn hiển thị player -->
+<div class="music-player">
+  <h2>🎵 Music Player</h2>
+  <div class="now-playing" id="nowPlaying">Đang tải danh sách...</div>
+  <ul class="playlist" id="playlist"><li>⏳ Đang tải...</li></ul>
+  <audio id="audio" controls></audio>
+  <button class="start-btn" id="startBtn">▶ Bắt đầu phát nhạc</button>
+</div>
+
+<!-- 3. JS — cho vào cuối <body> -->
+<script>
+  // ⚠️ Thay bằng URL Worker của ông
+  const API_URL = "https://music-player.wtf1.workers.dev";
+
+  let songs = [], currentIndex = -1, userInteracted = false;
+  const playlist = document.getElementById('playlist');
+  const audio = document.getElementById('audio');
+  const nowPlaying = document.getElementById('nowPlaying');
+  const startBtn = document.getElementById('startBtn');
+
+  async function loadSongs() {
+    try {
+      const res = await fetch(API_URL + '/api/songs');
+      const data = await res.json();
+      songs = data.songs || [];
+      if (songs.length === 0) {
+        playlist.innerHTML = '<li>Chưa có file MP3 nào</li>';
+        return;
+      }
+      renderPlaylist();
+      nowPlaying.textContent = 'Chọn một bài hát để phát';
+    } catch (err) {
+      playlist.innerHTML = '<li>❌ Lỗi tải danh sách</li>';
+    }
+  }
+
+  function renderPlaylist() {
+    playlist.innerHTML = '';
+    songs.forEach((song, i) => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span>' + song.title + '</span><span class="song-size">' + formatSize(song.size) + '</span>';
+      li.addEventListener('click', () => playSong(i));
+      playlist.appendChild(li);
+    });
+  }
+
+  function playSong(index) {
+    currentIndex = index;
+    const song = songs[index];
+    // Gọi qua API Worker — không đổi URL
+    audio.src = API_URL + song.url;
+    nowPlaying.textContent = 'Đang phát: ' + song.title;
+    document.querySelectorAll('.playlist li').forEach((li, i) => li.classList.toggle('active', i === index));
+    audio.play().catch(() => {
+      if (!userInteracted) nowPlaying.textContent = '👆 Bấm play để nghe: ' + song.title;
+    });
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  audio.addEventListener('ended', () => {
+    if (currentIndex < songs.length - 1) playSong(currentIndex + 1);
+  });
+
+  startBtn.addEventListener('click', () => {
+    userInteracted = true;
+    startBtn.classList.add('hidden');
+    if (songs.length > 0) playSong(0);
+  });
+
+  loadSongs();
+</script>
